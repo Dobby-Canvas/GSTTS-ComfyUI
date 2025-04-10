@@ -596,15 +596,15 @@ class GSVTTSNode:
 
     @classmethod
     def INPUT_TYPES(s):
-        SoVITS_names, GPT_names = get_weights_names(GPT_weight_root, SoVITS_weight_root)
+        # SoVITS_names, GPT_names = get_weights_names(GPT_weight_root, SoVITS_weight_root)
         return {
             "required":{
                 "text_dict": ("TEXTDICT",),
                 "prompt_text_dict":("TEXTDICT",),
                 "prompt_audio":("AUDIO",),
                 "config":("CONFIG",),
-                "GPT_weight":(GPT_names,),
-                "SoVITS_weight":(SoVITS_names,),
+                "GPT_weight":("STRING",),
+                "SoVITS_weight":("STRING",),
                 "how_to_cut":([i18n("不切"), i18n("凑四句一切"), i18n("凑50字一切"), i18n("按中文句号。切"), i18n("按英文句号.切"), i18n("按标点符号切"), ],{
                     "default": i18n("凑四句一切")
                 }),
@@ -683,12 +683,14 @@ class GSVTTSNode:
             speech = torchaudio.transforms.Resample(orig_freq=source_sr, new_freq=prompt_sr)(speech)
         if self.SoVITS_weight != SoVITS_weight:
             self.SoVITS_weight = SoVITS_weight
-            SoVITS_weight_path = os.path.join(models_dir,SoVITS_weight) if "s2G" in SoVITS_weight else os.path.join(work_path,SoVITS_weight)
+            # SoVITS_weight_path = os.path.join(models_dir,SoVITS_weight) if "s2G" in SoVITS_weight else os.path.join(work_path,SoVITS_weight)
+            SoVITS_weight_path = os.path.join(models_dir,SoVITS_weight + ".pth")
             change_sovits_weights(SoVITS_weight_path)
 
         if self.GPT_weight != GPT_weight:
             self.GPT_weight = GPT_weight
-            GPT_weight_path = os.path.join(models_dir,GPT_weight) if "epoch=" in GPT_weight else os.path.join(work_path,GPT_weight)
+            # GPT_weight_path = os.path.join(models_dir,GPT_weight) if "epoch=" in GPT_weight else os.path.join(work_path,GPT_weight)
+            GPT_weight_path = os.path.join(models_dir,GPT_weight + ".ckpt")
             change_gpt_weights(GPT_weight_path)
         
         res_audio = get_tts_wav(speech.squeeze(0),prompt_text,prompt_language,text,

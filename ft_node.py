@@ -2,12 +2,13 @@ import os,sys
 now_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(now_dir)
 import folder_paths
+from folder_paths import models_dir
 output_dir = folder_paths.get_output_directory()
 
 python_exe = sys.executable or "python"
 gsv_path = os.path.join(now_dir,"GPT_SoVITS")
 work_path = os.path.join(output_dir,"GPT_SoVITS")
-models_dir = os.path.join(gsv_path, "pretrained_models")
+models_dir = os.path.join(models_dir, "GPT_SoVITS", "pretrained_models")
 import shutil
 import traceback
 import torch
