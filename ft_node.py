@@ -669,8 +669,8 @@ import json
 import yaml
 n_gpu = torch.cuda.device_count()
 gpu_numbers = "-".join([str(i) for i in range(n_gpu)])
-SoVITS_weight_root=["SoVITS_weights_v2","SoVITS_weights"]
-GPT_weight_root=["GPT_weights_v2","GPT_weights"]
+SoVITS_weight_root=[os.path.join(models_dir,"SoVITS_weights_v2"),os.path.join(models_dir,"SoVITS_weights")]
+GPT_weight_root=[os.path.join(models_dir,"GPT_weights_v2"),os.path.join(models_dir,"GPT_weights")]
 
 class GSFinetuneNone:
 
