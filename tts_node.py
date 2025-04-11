@@ -693,6 +693,10 @@ class GSVTTSNode:
         prompt_language = prompt_text_dict['language']
 
         waveform = prompt_audio['waveform'].squeeze(0)
+        audio_np = waveform.numpy()
+        audio_np = librosa.effects.pitch_shift(audio_np, sr=prompt_sr, n_steps=pitch)
+        waveform = torch.from_numpy(audio_np)
+
         source_sr = prompt_audio['sample_rate']
         speech = waveform.mean(dim=0,keepdim=True)
         if source_sr != prompt_sr:
@@ -713,10 +717,7 @@ class GSVTTSNode:
                                 text_language,how_to_cut,top_k,top_p,
                                 temperature,speed)
 
-        audio_np = res_audio.numpy()
-        audio_np = librosa.effects.pitch_shift(audio_np, sr=prompt_sr, n_steps=pitch)
-        audio_np = audio_np * volume
-        res_audio = torch.from_numpy(audio_np)
+        res_audio = res_audio * volume
         res = {
             "waveform": res_audio.unsqueeze(0),
             "sample_rate": prompt_sr,
