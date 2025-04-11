@@ -587,6 +587,7 @@ prompt_sr = 32000
 import torchaudio
 from feature_extractor import cnhubert
 from transformers import AutoModelForMaskedLM, AutoTokenizer
+import librosa
 
 class GSVTTSNode:
 
@@ -639,6 +640,21 @@ class GSVTTSNode:
                     "display":"slider",
                     "default": 1.0
                 }),
+                "pitch":("FLOAT",{
+                    "min": -12.,
+                    "max":12.,
+                    "step":0.5,
+                    "display":"slider",
+                    "default": 0.0
+                }),
+                "volume":("FLOAT",{
+                    "min": 0.,
+                    "max":1.,
+                    "step":0.05,
+                    "rond": 0.001,
+                    "display":"slider",
+                    "default": 1.0
+                }),
             }
         }
 
@@ -649,7 +665,7 @@ class GSVTTSNode:
 
     def tts(self,text_dict,prompt_text_dict,prompt_audio,
             config,GPT_weight,SoVITS_weight,how_to_cut,
-            speed,top_k,top_p,temperature):
+            speed,top_k,top_p,temperature, pitch, volume):
         global ssl_model,is_half,tokenizer,bert_model
         
         is_half = config['is_half']
@@ -696,11 +712,17 @@ class GSVTTSNode:
         res_audio = get_tts_wav(speech.squeeze(0),prompt_text,prompt_language,text,
                                 text_language,how_to_cut,top_k,top_p,
                                 temperature,speed)
+
+        audio_np = res_audio.numpy()
+        audio_np = librosa.effects.pitch_shift(audio_np, sr=prompt_sr, n_steps=pitch)
+        audio_np = audio_np * volume
+        res_audio = torch.from_numpy(audio_np)
         res = {
             "waveform": res_audio.unsqueeze(0),
             "sample_rate": prompt_sr,
         }
         return (res,)
+
 
 import srt
 import datetime
