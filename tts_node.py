@@ -893,6 +893,18 @@ def get_tts_wav(
 #     '''
 
 
+def audio_sr(audio, sr):
+    global sr_model
+    if sr_model == None:
+        from tools.audio_sr import AP_BWE
+
+        try:
+            sr_model = AP_BWE(device, DictToAttrRecursive)
+        except FileNotFoundError:
+            return audio.cpu().detach().numpy(), sr
+    return sr_model(audio, sr)
+
+
 resample_transform_dict = {}
 
 def resample(audio_tensor, sr0,sr1):
@@ -1262,9 +1274,12 @@ class GSVTTSNode:
             GPT_weight_path = os.path.join(models_dir,GPT_weight + ".ckpt")
             change_gpt_weights(GPT_weight_path)
 
-        res_audio = get_tts_wav(speech.squeeze(0),prompt_text,prompt_language,text,
-                                text_language,how_to_cut,top_k,top_p,
+        res_audio = get_tts_wav(speech.squeeze(0), prompt_text, prompt_language, text,
+                                text_language, how_to_cut, top_k, top_p,
                                 temperature,speed)
+
+        if model_version == "v4":
+            res_audio = torchaudio.transforms.Resample(orig_freq=48000, new_freq=prompt_sr)(res_audio)
 
         res_audio = res_audio * volume
         res = {
