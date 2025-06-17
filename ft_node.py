@@ -21,8 +21,30 @@ from faster_whisper import WhisperModel
 from huggingface_hub import snapshot_download
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 snapshot_download(repo_id="lj1995/GPT-SoVITS",local_dir=models_dir)
-pretrained_sovits_name=["gsv-v2final-pretrained/s2G2333k.pth", "s2G488k.pth"]
-pretrained_gpt_name=["gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt","s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt"]
+pretrained_sovits_name=[
+    "s2G488k.pth",
+    "gsv-v2final-pretrained/s2G2333k.pth",
+    "s2Gv3.pth",
+    "gsv-v4-pretrained/s2Gv4.pth",
+]
+pretrained_gpt_name = [
+    "s1bert25hz-2kh-longer-epoch=68e-step=50232.ckpt",
+    "gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt",
+    "s1v3.ckpt",
+    "s1v3.ckpt",
+]
+SoVITS_weight_root = [
+    os.path.join(models_dir,"SoVITS_weights"),
+    os.path.join(models_dir,"SoVITS_weights_v2"),
+    os.path.join(models_dir,"SoVITS_weights_v3"),
+    os.path.join(models_dir,"SoVITS_weights_v4"),
+]
+GPT_weight_root=[
+    os.path.join(models_dir,"GPT_weights"),
+    os.path.join(models_dir,"GPT_weights_v2"),
+    os.path.join(models_dir,"GPT_weights_v3"),
+    os.path.join(models_dir,"GPT_weights_v4"),
+]
 
 class AudioSlicerNode:
 
@@ -56,7 +78,7 @@ class AudioSlicerNode:
                 }),
             }
         }
-    
+
     RETURN_TYPES = ("DIR",)
     #RETURN_NAMES = ("image_output_name",)
 
@@ -86,7 +108,7 @@ class AudioSlicerNode:
         speech = waveform.mean(dim=0,keepdim=True)
         if source_sr != prompt_sr:
             speech = torchaudio.transforms.Resample(orig_freq=source_sr, new_freq=prompt_sr)(speech)
-        
+
         for chunk, start, end in slicer.slice(speech.numpy()[0]):
             tmp_max = np.abs(chunk).max()
             if(tmp_max>1):chunk/=tmp_max
@@ -97,18 +119,18 @@ class AudioSlicerNode:
                 # chunk.astype(np.float32),
                 (chunk * 32767).astype(np.int16),
             )
-            
+
         return (slicer_dir,)
 
 class ASRNode:
     @classmethod
     def INPUT_TYPES(s):
         model_size_list = [
-        "tiny",     "tiny.en", 
-        "base",     "base.en", 
-        "small",    "small.en", 
-        "medium",   "medium.en", 
-        "large",    "large-v1", 
+        "tiny",     "tiny.en",
+        "base",     "base.en",
+        "small",    "small.en",
+        "medium",   "medium.en",
+        "large",    "large-v1",
         "large-v2", "large-v3"]
         return {
             "required": {
@@ -123,7 +145,7 @@ class ASRNode:
                 }),
             }
         }
-    
+
     RETURN_TYPES = ("FILE",)
     #RETURN_NAMES = ("image_output_name",)
 
@@ -142,7 +164,7 @@ class ASRNode:
         os.makedirs(output_folder,exist_ok=True)
         model_path = os.path.join(models_dir,f"faster-whisper-{model_size}")
         snapshot_download(repo_id=f"Systran/faster-whisper-{model_size}",local_dir=model_path)
-        
+
         if language == 'auto':
             language = None #不设置语种由模型自动输出概率最高的语种
             print("loading faster whisper model:",model_size,model_path)
@@ -151,7 +173,7 @@ class ASRNode:
             model = WhisperModel(model_path, device=device, compute_type=precision)
         except:
             return print(traceback.format_exc())
-        
+
         input_file_names = os.listdir(slicer_dir)
         input_file_names.sort()
         output = []
@@ -179,22 +201,22 @@ class ASRNode:
                 output.append(f"{file_path}|{output_file_name}|{info.language.upper()}|{text}")
             except:
                 print(traceback.format_exc())
-        
+
         output_folder = output_folder or "output/asr_opt"
         os.makedirs(output_folder, exist_ok=True)
-        
+
         with open(output_file_path, "w", encoding="utf-8") as f:
             f.write("\n".join(output))
             print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
         return (output_file_path, )
-        
+
 
 sys.path.append(gsv_path)
 import librosa
 from GPT_SoVITS import utils
 from tools.my_utils import load_audio
-from text.cleaner import clean_text 
-from feature_extractor import cnhubert 
+from text.cleaner import clean_text
+from feature_extractor import cnhubert
 from module.models import SynthesizerTrn
 
 class DatasetNode:
@@ -207,7 +229,7 @@ class DatasetNode:
                 "config": ("CONFIG",),
             }
         }
-    
+
     RETURN_TYPES = ("DATASET",)
 
     FUNCTION = "gen_dataset"
@@ -236,7 +258,7 @@ class DatasetNode:
             bert_model = bert_model.half().to(device)
         else:
             bert_model = bert_model.to(device)
-        
+
         def get_bert_feature(text, word2ph):
             with torch.no_grad():
                 inputs = tokenizer(text, return_tensors="pt")
@@ -274,7 +296,7 @@ class DatasetNode:
                     res.append([name, phones, word2ph, norm_text])
                 except:
                     print(name, text, traceback.format_exc())
-        
+
         todo = []
         res = []
         with open(inp_text, "r", encoding="utf8") as f:
@@ -316,7 +338,7 @@ class DatasetNode:
             opt.append("%s\t%s\t%s\t%s" % (name, phones, word2ph, norm_text))
         with open(path_text, "w", encoding="utf8") as f:
             f.write("\n".join(opt) + "\n")
-        
+
         del bert_model
         import gc;gc.collect();torch.cuda.empty_cache()
 
@@ -506,7 +528,7 @@ class ExperienceNode:
                 "exp_name":("STRING",{
                     "default": "aifsh"
                 }),
-                "version":(["v2","v1"],),
+                "version":(["v4", "v3", "v2","v1"],),
                 "is_half":("BOOLEAN",{
                     "default": True,
                 }),
@@ -521,7 +543,7 @@ class ExperienceNode:
                 }),
             }
         }
-    
+
     RETURN_TYPES = ("CONFIG",)
 
     FUNCTION = "set_param"
@@ -531,7 +553,7 @@ class ExperienceNode:
     CATEGORY = "AIFSH_GPT-SoVITS"
 
     def set_param(self,exp_name,version,is_half,if_redataset,if_ft_sovits,if_ft_gpt):
-        
+
         res = {
             "exp_name":exp_name,
             "version": version,
@@ -586,7 +608,7 @@ class ConfigSoVITSNode:
                 }),
             }
         }
-    
+
     RETURN_TYPES = ("CONFIG",)
 
     FUNCTION = "set_param"
@@ -644,7 +666,7 @@ class ConfigGPTNode:
                 }),
             }
         }
-    
+
     RETURN_TYPES = ("CONFIG",)
 
     FUNCTION = "set_param"
@@ -669,8 +691,6 @@ import json
 import yaml
 n_gpu = torch.cuda.device_count()
 gpu_numbers = "-".join([str(i) for i in range(n_gpu)])
-SoVITS_weight_root=[os.path.join(models_dir,"SoVITS_weights_v2"),os.path.join(models_dir,"SoVITS_weights")]
-GPT_weight_root=[os.path.join(models_dir,"GPT_weights_v2"),os.path.join(models_dir,"GPT_weights")]
 
 class GSFinetuneNone:
 
@@ -684,7 +704,7 @@ class GSFinetuneNone:
                 "gpt_config":("CONFIG",),
             }
         }
-    
+
     RETURN_TYPES = ()
 
     FUNCTION = "finetune"
@@ -699,13 +719,13 @@ class GSFinetuneNone:
             data=json.loads(data)
         s2_dir="%s/%s"%(work_path,config['exp_name'])
         os.makedirs("%s/logs_s2"%(s2_dir),exist_ok=True)
-        
+
         if(config['is_half']==False):
             data["train"]["fp16_run"]=False
             batch_size=max(1,sovits_config['batch_size']//2)
         else:
             batch_size = sovits_config['batch_size']
-        
+
         data["train"]["batch_size"]=batch_size
         data["train"]["epochs"]=sovits_config['total_epoch']
         data["train"]["text_low_lr_rate"]=sovits_config['text_low_lr_rate']
@@ -737,7 +757,7 @@ class GSFinetuneNone:
             data=yaml.load(data, Loader=yaml.FullLoader)
         s1_dir="%s/%s"%(work_path,config['exp_name'])
         os.makedirs("%s/logs_s1"%(s1_dir),exist_ok=True)
-       
+
         if(config['is_half']==False):
             data["train"]["precision"]="32"
             batch_size = max(1, gpt_config['batch_size'] // 2)
@@ -780,4 +800,4 @@ class GSFinetuneNone:
             print("GPT训练完成")
         return ()
 
-        
+
