@@ -1153,6 +1153,7 @@ class GSVTTSNode:
         if model_version == "v4":
             res_audio = torchaudio.transforms.Resample(orig_freq=48000, new_freq=prompt_sr)(res_audio)
 
+        res_audio = res_audio * volume
         res = {
             "waveform": res_audio.unsqueeze(0),
             "sample_rate": prompt_sr,
