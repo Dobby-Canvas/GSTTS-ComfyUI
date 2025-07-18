@@ -512,7 +512,7 @@ def get_tts_wav(
     temperature=0.6,
     ref_free=False,
     speed=1,
-    sample_steps=32,
+    sample_steps=16,
     if_freeze=False,
     inp_refs=None,
     if_sr=False,
