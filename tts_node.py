@@ -1194,7 +1194,9 @@ class GSVTTSNode:
         prompt_language = prompt_text_dict['language']
 
         waveform = prompt_audio['waveform'].squeeze(0)
-        audio_np = waveform.numpy()
+        audio_np = waveform.numpy().astype(np.float32)
+        if np.abs(audio_np).max() > 1.0:
+            audio_np /= 32768.0
         audio_np = librosa.effects.pitch_shift(audio_np, sr=prompt_sr, n_steps=pitch)
         waveform = torch.from_numpy(audio_np)
 
