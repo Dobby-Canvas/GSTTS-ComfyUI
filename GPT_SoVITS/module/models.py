@@ -26,6 +26,7 @@ import random
 
 
 class StochasticDurationPredictor(nn.Module):
+
     def __init__(
         self,
         in_channels,
@@ -115,6 +116,7 @@ class StochasticDurationPredictor(nn.Module):
 
 
 class DurationPredictor(nn.Module):
+
     def __init__(self, in_channels, filter_channels, kernel_size, p_dropout, gin_channels=0):
         super().__init__()
 
@@ -152,6 +154,7 @@ class DurationPredictor(nn.Module):
 
 
 class TextEncoder(nn.Module):
+
     def __init__(
         self,
         out_channels,
@@ -186,9 +189,8 @@ class TextEncoder(nn.Module):
             p_dropout,
         )
 
-        self.encoder_text = attentions.Encoder(
-            hidden_channels, filter_channels, n_heads, n_layers, kernel_size, p_dropout
-        )
+        self.encoder_text = attentions.Encoder(hidden_channels, filter_channels, n_heads, n_layers, kernel_size,
+                                               p_dropout)
 
         if self.version == "v1":
             symbols = symbols_v1.symbols
@@ -251,6 +253,7 @@ class TextEncoder(nn.Module):
 
 
 class ResidualCouplingBlock(nn.Module):
+
     def __init__(
         self,
         channels,
@@ -281,8 +284,7 @@ class ResidualCouplingBlock(nn.Module):
                     n_layers,
                     gin_channels=gin_channels,
                     mean_only=True,
-                )
-            )
+                ))
             self.flows.append(modules.Flip())
 
     def forward(self, x, x_mask, g=None, reverse=False):
@@ -296,6 +298,7 @@ class ResidualCouplingBlock(nn.Module):
 
 
 class PosteriorEncoder(nn.Module):
+
     def __init__(
         self,
         in_channels,
@@ -338,9 +341,15 @@ class PosteriorEncoder(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(
-        self, in_channels, out_channels, hidden_channels, kernel_size, dilation_rate, n_layers, gin_channels=0
-    ):
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 hidden_channels,
+                 kernel_size,
+                 dilation_rate,
+                 n_layers,
+                 gin_channels=0):
         super().__init__()
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -365,6 +374,7 @@ class Encoder(nn.Module):
 
 
 class WNEncoder(nn.Module):
+
     def __init__(
         self,
         in_channels,
@@ -405,6 +415,7 @@ class WNEncoder(nn.Module):
 
 
 class Generator(torch.nn.Module):
+
     def __init__(
         self,
         initial_channel,
@@ -414,7 +425,8 @@ class Generator(torch.nn.Module):
         upsample_rates,
         upsample_initial_channel,
         upsample_kernel_sizes,
-        gin_channels=0,is_bias=False,
+        gin_channels=0,
+        is_bias=False,
     ):
         super(Generator, self).__init__()
         self.num_kernels = len(resblock_kernel_sizes)
@@ -428,17 +440,15 @@ class Generator(torch.nn.Module):
                 weight_norm(
                     ConvTranspose1d(
                         upsample_initial_channel // (2**i),
-                        upsample_initial_channel // (2 ** (i + 1)),
+                        upsample_initial_channel // (2**(i + 1)),
                         k,
                         u,
                         padding=(k - u) // 2,
-                    )
-                )
-            )
+                    )))
 
         self.resblocks = nn.ModuleList()
         for i in range(len(self.ups)):
-            ch = upsample_initial_channel // (2 ** (i + 1))
+            ch = upsample_initial_channel // (2**(i + 1))
             for j, (k, d) in enumerate(zip(resblock_kernel_sizes, resblock_dilation_sizes)):
                 self.resblocks.append(resblock(ch, k, d))
 
@@ -478,60 +488,49 @@ class Generator(torch.nn.Module):
 
 
 class DiscriminatorP(torch.nn.Module):
+
     def __init__(self, period, kernel_size=5, stride=3, use_spectral_norm=False):
         super(DiscriminatorP, self).__init__()
         self.period = period
         self.use_spectral_norm = use_spectral_norm
         norm_f = weight_norm if use_spectral_norm == False else spectral_norm
-        self.convs = nn.ModuleList(
-            [
-                norm_f(
-                    Conv2d(
-                        1,
-                        32,
-                        (kernel_size, 1),
-                        (stride, 1),
-                        padding=(get_padding(kernel_size, 1), 0),
-                    )
-                ),
-                norm_f(
-                    Conv2d(
-                        32,
-                        128,
-                        (kernel_size, 1),
-                        (stride, 1),
-                        padding=(get_padding(kernel_size, 1), 0),
-                    )
-                ),
-                norm_f(
-                    Conv2d(
-                        128,
-                        512,
-                        (kernel_size, 1),
-                        (stride, 1),
-                        padding=(get_padding(kernel_size, 1), 0),
-                    )
-                ),
-                norm_f(
-                    Conv2d(
-                        512,
-                        1024,
-                        (kernel_size, 1),
-                        (stride, 1),
-                        padding=(get_padding(kernel_size, 1), 0),
-                    )
-                ),
-                norm_f(
-                    Conv2d(
-                        1024,
-                        1024,
-                        (kernel_size, 1),
-                        1,
-                        padding=(get_padding(kernel_size, 1), 0),
-                    )
-                ),
-            ]
-        )
+        self.convs = nn.ModuleList([
+            norm_f(Conv2d(
+                1,
+                32,
+                (kernel_size, 1),
+                (stride, 1),
+                padding=(get_padding(kernel_size, 1), 0),
+            )),
+            norm_f(Conv2d(
+                32,
+                128,
+                (kernel_size, 1),
+                (stride, 1),
+                padding=(get_padding(kernel_size, 1), 0),
+            )),
+            norm_f(Conv2d(
+                128,
+                512,
+                (kernel_size, 1),
+                (stride, 1),
+                padding=(get_padding(kernel_size, 1), 0),
+            )),
+            norm_f(Conv2d(
+                512,
+                1024,
+                (kernel_size, 1),
+                (stride, 1),
+                padding=(get_padding(kernel_size, 1), 0),
+            )),
+            norm_f(Conv2d(
+                1024,
+                1024,
+                (kernel_size, 1),
+                1,
+                padding=(get_padding(kernel_size, 1), 0),
+            )),
+        ])
         self.conv_post = norm_f(Conv2d(1024, 1, (3, 1), 1, padding=(1, 0)))
 
     def forward(self, x):
@@ -557,19 +556,18 @@ class DiscriminatorP(torch.nn.Module):
 
 
 class DiscriminatorS(torch.nn.Module):
+
     def __init__(self, use_spectral_norm=False):
         super(DiscriminatorS, self).__init__()
         norm_f = weight_norm if use_spectral_norm == False else spectral_norm
-        self.convs = nn.ModuleList(
-            [
-                norm_f(Conv1d(1, 16, 15, 1, padding=7)),
-                norm_f(Conv1d(16, 64, 41, 4, groups=4, padding=20)),
-                norm_f(Conv1d(64, 256, 41, 4, groups=16, padding=20)),
-                norm_f(Conv1d(256, 1024, 41, 4, groups=64, padding=20)),
-                norm_f(Conv1d(1024, 1024, 41, 4, groups=256, padding=20)),
-                norm_f(Conv1d(1024, 1024, 5, 1, padding=2)),
-            ]
-        )
+        self.convs = nn.ModuleList([
+            norm_f(Conv1d(1, 16, 15, 1, padding=7)),
+            norm_f(Conv1d(16, 64, 41, 4, groups=4, padding=20)),
+            norm_f(Conv1d(64, 256, 41, 4, groups=16, padding=20)),
+            norm_f(Conv1d(256, 1024, 41, 4, groups=64, padding=20)),
+            norm_f(Conv1d(1024, 1024, 41, 4, groups=256, padding=20)),
+            norm_f(Conv1d(1024, 1024, 5, 1, padding=2)),
+        ])
         self.conv_post = norm_f(Conv1d(1024, 1, 3, 1, padding=1))
 
     def forward(self, x):
@@ -587,6 +585,7 @@ class DiscriminatorS(torch.nn.Module):
 
 
 class MultiPeriodDiscriminator(torch.nn.Module):
+
     def __init__(self, use_spectral_norm=False):
         super(MultiPeriodDiscriminator, self).__init__()
         periods = [2, 3, 5, 7, 11]
@@ -631,9 +630,7 @@ class ReferenceEncoder(nn.Module):
                     kernel_size=(3, 3),
                     stride=(2, 2),
                     padding=(1, 1),
-                )
-            )
-            for i in range(K)
+                )) for i in range(K)
         ]
         self.convs = nn.ModuleList(convs)
         # self.wns = nn.ModuleList([weight_norm(num_features=ref_enc_filters[i]) for i in range(K)])
@@ -671,29 +668,27 @@ class ReferenceEncoder(nn.Module):
 
 
 class Quantizer_module(torch.nn.Module):
+
     def __init__(self, n_e, e_dim):
         super(Quantizer_module, self).__init__()
         self.embedding = nn.Embedding(n_e, e_dim)
         self.embedding.weight.data.uniform_(-1.0 / n_e, 1.0 / n_e)
 
     def forward(self, x):
-        d = (
-            torch.sum(x**2, 1, keepdim=True)
-            + torch.sum(self.embedding.weight**2, 1)
-            - 2 * torch.matmul(x, self.embedding.weight.T)
-        )
+        d = (torch.sum(x**2, 1, keepdim=True) + torch.sum(self.embedding.weight**2, 1) -
+             2 * torch.matmul(x, self.embedding.weight.T))
         min_indicies = torch.argmin(d, 1)
         z_q = self.embedding(min_indicies)
         return z_q, min_indicies
 
 
 class Quantizer(torch.nn.Module):
+
     def __init__(self, embed_dim=512, n_code_groups=4, n_codes=160):
         super(Quantizer, self).__init__()
         assert embed_dim % n_code_groups == 0
         self.quantizer_modules = nn.ModuleList(
-            [Quantizer_module(n_codes, embed_dim // n_code_groups) for _ in range(n_code_groups)]
-        )
+            [Quantizer_module(n_codes, embed_dim // n_code_groups) for _ in range(n_code_groups)])
         self.n_code_groups = n_code_groups
         self.embed_dim = embed_dim
 
@@ -710,7 +705,7 @@ class Quantizer(torch.nn.Module):
             z_q.append(_z_q)
             min_indicies.append(_min_indicies)  # B * T,
         z_q = torch.cat(z_q, -1).reshape(xin.shape)
-        loss = 0.25 * torch.mean((z_q.detach() - xin) ** 2) + torch.mean((z_q - xin.detach()) ** 2)
+        loss = 0.25 * torch.mean((z_q.detach() - xin)**2) + torch.mean((z_q - xin.detach())**2)
         z_q = xin + (z_q - xin).detach()
         z_q = z_q.transpose(1, 2)
         codes = torch.stack(min_indicies, -1).reshape(B, T, self.n_code_groups)
@@ -729,6 +724,7 @@ class Quantizer(torch.nn.Module):
 
 
 class CodePredictor(nn.Module):
+
     def __init__(
         self,
         hidden_channels,
@@ -941,6 +937,7 @@ class SynthesizerTrn(nn.Module):
 
     @torch.no_grad()
     def decode(self, codes, text, refer, noise_scale=0.5, speed=1):
+
         def get_ge(refer):
             ge = None
             if refer is not None:
@@ -982,6 +979,7 @@ class SynthesizerTrn(nn.Module):
 
 
 class CFM(torch.nn.Module):
+
     def __init__(self, in_channels, dit):
         super().__init__()
         self.sigma_min = 1e-6
@@ -1008,9 +1006,15 @@ class CFM(torch.nn.Module):
             t_tensor = torch.ones(x.shape[0], device=x.device, dtype=mu.dtype) * t
             d_tensor = torch.ones(x.shape[0], device=x.device, dtype=mu.dtype) * d
             # v_pred = model(x, t_tensor, d_tensor, **extra_args)
-            v_pred = self.estimator(
-                x, prompt_x, x_lens, t_tensor, d_tensor, mu, use_grad_ckpt=False, drop_audio_cond=False, drop_text=False
-            ).transpose(2, 1)
+            v_pred = self.estimator(x,
+                                    prompt_x,
+                                    x_lens,
+                                    t_tensor,
+                                    d_tensor,
+                                    mu,
+                                    use_grad_ckpt=False,
+                                    drop_audio_cond=False,
+                                    drop_text=False).transpose(2, 1)
             if inference_cfg_rate > 1e-5:
                 neg = self.estimator(
                     x,
@@ -1038,11 +1042,11 @@ class CFM(torch.nn.Module):
         dt = torch.zeros_like(t, device=mu.device)
         prompt = torch.zeros_like(x1)
         for i in range(b):
-            prompt[i, :, : prompt_lens[i]] = x1[i, :, : prompt_lens[i]]
-            xt[i, :, : prompt_lens[i]] = 0
+            prompt[i, :, :prompt_lens[i]] = x1[i, :, :prompt_lens[i]]
+            xt[i, :, :prompt_lens[i]] = 0
         gailv = 0.3  # if ttime()>1736250488 else 0.1
         if random.random() < gailv:
-            base = torch.randint(2, 8, (t.shape[0],), device=mu.device)
+            base = torch.randint(2, 8, (t.shape[0], ), device=mu.device)
             d = 1 / torch.pow(2, base)
             d_input = d.clone()
             d_input[d_input < 1e-2] = 0
@@ -1059,7 +1063,7 @@ class CFM(torch.nn.Module):
         vt_pred = self.estimator(xt, prompt, x_lens, t, dt, mu, use_grad_ckpt).transpose(2, 1)
         loss = 0
         for i in range(b):
-            loss += self.criterion(vt_pred[i, :, prompt_lens[i] : x_lens[i]], vt[i, :, prompt_lens[i] : x_lens[i]])
+            loss += self.criterion(vt_pred[i, :, prompt_lens[i]:x_lens[i]], vt[i, :, prompt_lens[i]:x_lens[i]])
         loss /= b
 
         return loss
@@ -1122,9 +1126,8 @@ class SynthesizerTrnV3(nn.Module):
 
         self.model_dim = 512
         self.use_sdp = use_sdp
-        self.enc_p = TextEncoder(
-            inter_channels, hidden_channels, filter_channels, n_heads, n_layers, kernel_size, p_dropout
-        )
+        self.enc_p = TextEncoder(inter_channels, hidden_channels, filter_channels, n_heads, n_layers, kernel_size,
+                                 p_dropout)
         # self.ref_enc = modules.MelStyleEncoder(spec_channels, style_vector_dim=gin_channels)###Rollback
         self.ref_enc = modules.MelStyleEncoder(704, style_vector_dim=gin_channels)  ###Rollback
         # self.dec = Generator(inter_channels, resblock, resblock_kernel_sizes, resblock_dilation_sizes, upsample_rates,
@@ -1156,9 +1159,8 @@ class SynthesizerTrnV3(nn.Module):
             set_no_grad(self.quantizer)
             set_no_grad(self.enc_p)
 
-    def forward(
-        self, ssl, y, mel, ssl_lengths, y_lengths, text, text_lengths, mel_lengths, use_grad_ckpt
-    ):  # ssl_lengths no need now
+    def forward(self, ssl, y, mel, ssl_lengths, y_lengths, text, text_lengths, mel_lengths,
+                use_grad_ckpt):  # ssl_lengths no need now
         with autocast(enabled=False):
             y_mask = torch.unsqueeze(commons.sequence_mask(y_lengths, y.size(2)), 1).to(y.dtype)
             ge = self.ref_enc(y[:, :704] * y_mask, y_mask)
@@ -1173,10 +1175,10 @@ class SynthesizerTrnV3(nn.Module):
                 quantized = F.interpolate(quantized, scale_factor=2, mode="nearest")  ##BCT
                 x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge)
         fea = self.bridge(x)
-        fea = F.interpolate(fea, scale_factor=(1.875 if self.version=="v3"else 2), mode="nearest")  ##BCT
+        fea = F.interpolate(fea, scale_factor=(1.875 if self.version == "v3" else 2), mode="nearest")  ##BCT
         fea, y_mask_ = self.wns1(
-            fea, mel_lengths, ge
-        )  ##If the 1-minute fine-tuning works fine, no need to manually adjust the learning rate.
+            fea, mel_lengths,
+            ge)  ##If the 1-minute fine-tuning works fine, no need to manually adjust the learning rate.
         B = ssl.shape[0]
         prompt_len_max = mel_lengths * 2 / 3
         prompt_len = (torch.rand([B], device=fea.device) * prompt_len_max).floor().to(dtype=torch.long)
@@ -1196,9 +1198,9 @@ class SynthesizerTrnV3(nn.Module):
             ge = self.ref_enc(refer[:, :704] * refer_mask, refer_mask)
         y_lengths = torch.LongTensor([int(codes.size(2) * 2)]).to(codes.device)
         if speed == 1:
-            sizee = int(codes.size(2) * (3.875 if self.version=="v3"else 4))
+            sizee = int(codes.size(2) * (3.875 if self.version == "v3" else 4))
         else:
-            sizee = int(codes.size(2) * (3.875 if self.version=="v3"else 4) / speed) + 1
+            sizee = int(codes.size(2) * (3.875 if self.version == "v3" else 4) / speed) + 1
         y_lengths1 = torch.LongTensor([sizee]).to(codes.device)
         text_lengths = torch.LongTensor([text.size(-1)]).to(text.device)
 
@@ -1207,7 +1209,7 @@ class SynthesizerTrnV3(nn.Module):
             quantized = F.interpolate(quantized, scale_factor=2, mode="nearest")  ##BCT
         x, m_p, logs_p, y_mask = self.enc_p(quantized, y_lengths, text, text_lengths, ge, speed)
         fea = self.bridge(x)
-        fea = F.interpolate(fea, scale_factor=(1.875 if self.version=="v3"else 2), mode="nearest")  ##BCT
+        fea = F.interpolate(fea, scale_factor=(1.875 if self.version == "v3" else 2), mode="nearest")  ##BCT
         ####more wn paramter to learn mel
         fea, y_mask_ = self.wns1(fea, y_lengths1, ge)
         return fea, ge
@@ -1268,9 +1270,8 @@ class SynthesizerTrnV3b(nn.Module):
 
         self.model_dim = 512
         self.use_sdp = use_sdp
-        self.enc_p = TextEncoder(
-            inter_channels, hidden_channels, filter_channels, n_heads, n_layers, kernel_size, p_dropout
-        )
+        self.enc_p = TextEncoder(inter_channels, hidden_channels, filter_channels, n_heads, n_layers, kernel_size,
+                                 p_dropout)
         # self.ref_enc = modules.MelStyleEncoder(spec_channels, style_vector_dim=gin_channels)###Rollback
         self.ref_enc = modules.MelStyleEncoder(704, style_vector_dim=gin_channels)  ###Rollback
         self.dec = Generator(
@@ -1283,9 +1284,13 @@ class SynthesizerTrnV3b(nn.Module):
             upsample_kernel_sizes,
             gin_channels=gin_channels,
         )
-        self.enc_q = PosteriorEncoder(
-            spec_channels, inter_channels, hidden_channels, 5, 1, 16, gin_channels=gin_channels
-        )
+        self.enc_q = PosteriorEncoder(spec_channels,
+                                      inter_channels,
+                                      hidden_channels,
+                                      5,
+                                      1,
+                                      16,
+                                      gin_channels=gin_channels)
         self.flow = ResidualCouplingBlock(inter_channels, hidden_channels, 5, 1, 4, gin_channels=gin_channels)
 
         ssl_dim = 768

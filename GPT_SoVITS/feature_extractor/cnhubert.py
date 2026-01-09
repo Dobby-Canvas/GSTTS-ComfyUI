@@ -20,6 +20,7 @@ cnhubert_base_path = None
 
 
 class CNHubert(nn.Module):
+
     def __init__(self, base_path: str = None):
         super().__init__()
         if base_path is None:
@@ -28,7 +29,9 @@ class CNHubert(nn.Module):
             ...
         else:
             raise FileNotFoundError(base_path)
-        self.model = HubertModel.from_pretrained(base_path, local_files_only=True)
+        # self.model = HubertModel.from_pretrained(base_path, local_files_only=True)
+        os.environ['TRANSFORMERS_SAFE_LOADING_DISABLED'] = '1'
+        self.model = HubertModel.from_pretrained(base_path, local_files_only=True, use_safetensors=True)
         self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(base_path, local_files_only=True)
 
     def forward(self, x):
